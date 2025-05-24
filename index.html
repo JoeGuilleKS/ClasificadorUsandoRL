@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Predicción en tiempo real - Gato vs Perro</title>
+</head>
+<body>
+    <h1>Predicción en tiempo real con cámara</h1>
+
+    <video id="video" width="320" height="240" autoplay></video>
+    <p id="resultado">Esperando predicción...</p>
+    <canvas id="canvas" width="100" height="100" style="display:none;"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const resultado = document.getElementById('resultado');
+        const ctx = canvas.getContext('2d');
+
+        // Acceder a la cámara
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Error accediendo a la cámara: ", err);
+            });
+
+        async function enviarFrame() {
+            ctx.drawImage(video, 0, 0, 100, 100);
+            const imgBase64 = canvas.toDataURL('image/jpeg');
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imgBase64 })
+                });
+                const data = await response.json();
+                resultado.innerText = 'Predicción: ' + data.prediction;
+            } catch (error) {
+                resultado.innerText = 'Error al conectar con el servidor.';
+                console.error(error);
+            }
+        }
+
+        // Enviar un frame cada 700 ms aprox
+        setInterval(enviarFrame, 700);
+    </script>
+</body>
+</html>
